@@ -11,10 +11,10 @@ app.use(bodyParser.json())
 
 app.use(cors())
 
-const UsreRouter = require('./router/user_router')
+const UserRouter = require('./router/user_router')
 
-app.use('/user',UsreRouter)
-
-app.listen('3000',()=>{
-    console.log('server running');
-}) 
+app.use('/user',UserRouter)
+const PORT = 8081;
+app.listen(PORT, () => {
+    console.log("server running");
+});  
