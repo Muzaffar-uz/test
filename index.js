@@ -13,8 +13,16 @@ app.use(cors())
 
 const UserRouter = require('./router/user_router')
 
+<<<<<<< HEAD
 app.use('/user',UserRouter)
 const PORT = 8081;
 app.listen(PORT, () => {
     console.log("server running");
 });  
+=======
+app.use('/user',UsreRouter)
+
+app.listen('8181',()=>{
+    console.log('server running');
+}) 
+>>>>>>> 5e57d95 (man)
