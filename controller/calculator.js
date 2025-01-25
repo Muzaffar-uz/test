@@ -6,7 +6,8 @@ function calculateProfit(data) {
     let totalProfit = 0; // Jami foyda
     // Valyutaga qarab foiz stavkasini belgilash
     if (currency == 'USD' && reinvest === "reinvest") {
-        annualRate = 12;  
+        annualRate = 12; 
+        
     } else if (currency == "USD") {
         annualRate = 7;
     } else if (currency == 'SUM' && reinvest === "reinvest") {

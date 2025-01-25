@@ -9,6 +9,17 @@ exports.getUser = async (req, res) => {
     return res.status(200).json({ success: true, user: user });
 };
 
+// Foydalanuvchilar ro'yxatini olish
+exports.getUser1 = async (req, res) => {
+  try {
+      const users = await User.query().select("id", "name", "role");
+      return res.status(200).json({ success: true, user: users });
+  } catch (error) {
+      console.error(error);
+      return res.status(500).json({ success: false, message: 'Server xatosi' });
+  }
+};
+
 // foydalanuvchi qo'shish
 exports.postUser = async (req, res) => {
     try {
@@ -56,6 +67,8 @@ exports.postUser = async (req, res) => {
             return res.status(400).json({success:false, err:"time-error"})
           }
           await User.query().update({
+            name:req.body.name,
+            surname:req.body,surname,
             code: null,
             exp_code_time: null,
           })
