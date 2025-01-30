@@ -3,145 +3,161 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const secret = require("../config/config");
 
-// Ma'lumot olish
+//  Barcha foydalanuvchilarni olish
 exports.getUser = async (req, res) => {
-    const user = await User.query().select("*");
-    return res.status(200).json({ success: true, user: user });
+    try {
+        const users = await User.query().select("*");
+        return res.status(200).json({ success: true, users });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: "Server error" });
+    }
 };
 
-// Foydalanuvchilar ro'yxatini olish
-exports.getUser1 = async (req, res) => {
-  try {
-      const users = await User.query().select("id", "name", "role");
-      return res.status(200).json({ success: true, user: users });
-  } catch (error) {
-      console.error(error);
-      return res.status(500).json({ success: false, message: 'Server xatosi' });
-  }
+// Foydalanuvchilar ro'yxatini olish (faqat id, name, role)
+exports.getUserList = async (req, res) => {
+    try {
+        const users = await User.query().select("id", "name", "role");
+        return res.status(200).json({ success: true, users });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
 };
 
-// foydalanuvchi qo'shish
+//  Foydalanuvchi qo'shish (registratsiya)
 exports.postUser = async (req, res) => {
     try {
+        const { phone, step, code, name, lastname, password } = req.body;
 
-      if (req.body.step == 1) {
-        const user = await User.query().where('phone',req.body.phone).first()
-        if(user){
-            return res.status(404).json({success:false, err:'User already exists'})
-        }
-        await User.query().insert({
-          phone: req.body.phone
-        })
-        const code = Math.floor((Math.random()+1)*10000)
-        const d = new Date()
-        const time = d.setMinutes(d.getMinutes()+5)
-        await User.query().where('phone',req.body.phone).update({
-            code: code,
-            exp_code_time: time,
-        })
-      }
-      
-        //smsga kod yuborish
+        if (step === 1) {
+            const existingUser = await User.query().where("phone", phone).first();
+            if (existingUser) {
+                return res.status(409).json({ success: false, err: "User already exists" });
+            }
 
-        if(req.body.step == 2){
-          const user =  User.query().where('phone',req.body.phone).first()
-          if(!User){
-            return res.status(404).json({success:false, err: "user-notfound"})
-          }
-          if(user.code!= req.body.code){
-            return res.status(400).json({success:false, err: "code-worng"})
-          }
-          if(user.exp_code_time < new Date().getMinutes()){
-            return res.status(400).json({success:false, err:"time-error"})
-          }
-      return res.status(200).json({success:true, msg: "success"})
+            await User.query().insert({ phone });
+            const verificationCode = Math.floor((Math.random() + 1) * 10000);
+            const expirationTime = Date.now() + 5 * 60 * 1000; // 5 daqiqa
+
+            await User.query().where("phone", phone).update({
+                code: verificationCode,
+                exp_code_time: expirationTime,
+            });
+
+            return res.status(200).json({ success: true, msg: "Verification code sent" });
         }
-        if(req.body.step == 3){
-          if(!User){
-            return res.status(404).json({success:false, err: "user-notfound"})
-          }
-          if(user.code!= req.body.code){
-            return res.status(400).json({success:false, err: "code-worng"})
-          }
-          if(user.exp_code_time < new Date().getMinutes()){
-            return res.status(400).json({success:false, err:"time-error"})
-          }
-          await User.query().update({
-            name:req.body.name,
-            surname:req.body,surname,
-            code: null,
-            exp_code_time: null,
-          })
-        }      
-        if(req.body.step == 4){
-          if(!User){
-            return res.status(404).json({success:false, err: "user-notfound"})
-          }
-          await User.query.update({
-            note:req.body.note,
-            balance_$$: req.body.balance_$$,
-            balance_sum:balance_sum,
+
+        if (step === 2) {
+            const user = await User.query().where("phone", phone).first();
+            if (!user) {
+                return res.status(404).json({ success: false, err: "User not found" });
+            }
+            if (user.code !== code) {
+                return res.status(400).json({ success: false, err: "Wrong code" });
+            }
+            if (user.exp_code_time < Date.now()) {
+                return res.status(400).json({ success: false, err: "Code expired" });
+            }
+
+            return res.status(200).json({ success: true, msg: "Code verified" });
+        }
+
+        if (step === 3) {
+            const user = await User.query().where("phone", phone).first();
+            if (!user) {
+                return res.status(404).json({ success: false, err: "User not found" });
+            }
+
+            await User.query().where("phone", phone).update({
+                name,
+                lastname,
+                code: null,
+                exp_code_time: null,
+            });
+
+            return res.status(200).json({ success: true, msg: "User info updated" });
+        }
+
+        if (step === 4) {
+            const salt = await bcrypt.genSalt(12);
+            const hashedPassword = await bcrypt.hash(password, salt);
             
-          })
+            await User.query().where("phone", phone).update({ password: hashedPassword });
+
+            return res.status(200).json({ success: true, msg: "Password set successfully" });
         }
-        
-        // Muvaffaqiyatli javob
-        return res
-            .status(201)
-            .json({ success: true, message: "Foydalanuvchi yaratildi" });
+
+        return res.status(400).json({ success: false, err: "Invalid step" });
+
     } catch (error) {
-        // Xatolik yuz berganda javob
-        console.error("Xatolik:", error.message);
-        return res
-            .status(500)
-            .json({ success: false, error: "Ichki server xatosi" });
+        return res.status(500).json({ success: false, error: "Server error" });
     }
-}
-
-
-
-// fodalanuvchini yangilash paramsda
-exports.updetUser = async (req, res) => {
-    const d = new Date();
-
-    await User.query().where("id", req.params.id).update({
-        name: req.body.name,
-        role: req.body.role,
-        email: req.body.email,
-        password: req.body.password,
-        phone: req.body.phone,
-        login: req.body.login,
-        created: d,
-    });
-    return res
-        .status(200)
-        .json({ success: true, msg: "foydalanuvchi o/'zgartirldi" });
 };
 
-// foydalanuvchini o'chirish
-exports.delteUser = async (req, res) => {
-    await User.query().where("id", req.params.id).delete();
-    return res
-        .status(200)
-        .json({ success: true, msg: "foydalanuvchi o'chirildi" });
+//  Foydalanuvchini yangilash
+exports.updateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await User.query().where("id", id).first();
+
+        if (!user) {
+            return res.status(404).json({ success: false, msg: "User not found" });
+        }
+
+        await User.query().where("id", id).update({
+            name: req.body.name,
+            role: req.body.role,
+            email: req.body.email,
+            phone: req.body.phone,
+            login: req.body.login,
+            updated_at: new Date(),
+        });
+
+        return res.status(200).json({ success: true, msg: "User updated" });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, error: "Server error" });
+    }
 };
 
-// foydalanuvchi atarizatsiyasi
-// exports.auth = async (req, res) => {
-//   const user = await User.query().where("login", req.body.login).first();
-//   if (!user) {
-// return res.status(404).json({ success: false, err: "user-not-found" });
-//   }
-//   const checkPassword = await bcrypt.compareSync(
-// req.body.password,
-// user.password
-//   )
-//   if (!checkPassword) {
-// return res.status(400).json({ success: false, err: "login-or-password-fail" });
-//   }
-//   const payload = { id: user.id };
-//
-//   const token = await jwt.sign(payload, secret, { expiresIn: "1d" });
-//   return res.status(200).json({ success: true, token: token });
-// };
-//
+//  Foydalanuvchini o‘chirish
+exports.deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await User.query().where("id", id).first();
+
+        if (!user) {
+            return res.status(404).json({ success: false, msg: "User not found" });
+        }
+
+        await User.query().where("id", id).delete();
+        return res.status(200).json({ success: true, msg: "User deleted" });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, error: "Server error" });
+    }
+};
+
+//  Login (autentifikatsiya)
+exports.auth = async (req, res) => {
+    try {
+        const { login, password } = req.body;
+        const user = await User.query().where("login", login).first();
+
+        if (!user) {
+            return res.status(404).json({ success: false, err: "User not found" });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({ success: false, err: "Invalid login or password" });
+        }
+
+        const payload = { id: user.id };
+        const token = jwt.sign(payload, secret, { expiresIn: "1d" });
+
+        return res.status(200).json({ success: true, token });
+
+    } catch (error) {
+        return res.status(500).json({ success: false, error: "Server error" });
+    }
+};

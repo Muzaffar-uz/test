@@ -1,13 +1,13 @@
 const router = require('express').Router()
 const Usercontroller = require('../controller/user_controller')
-
+const {protect,role} = require('../middleware/auth-middleware')
 
 ;
 router.get('/all',Usercontroller.getUser)
-router.get('/all1',Usercontroller.getUser1)
+router.get('/allList',Usercontroller.getUserList)
 router.post('/insert',Usercontroller.postUser); 
-router.put('/updated/:id',Usercontroller.updetUser)
-router.delete('/delete/:id',Usercontroller.delteUser)
+router.put('/updated/:id',Usercontroller.updateUser)
+router.delete('/delete/:id',Usercontroller.deleteUser)
 // router.post('/auth',Usercontroller.auth)
 
 
