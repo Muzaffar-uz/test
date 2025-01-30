@@ -26,47 +26,51 @@ exports.getUserList = async (req, res) => {
 //  Foydalanuvchi qo'shish (registratsiya)
 exports.postUser = async (req, res) => {
     try {
-        const { phone, step, code, name, lastname, password } = req.body;
+        const { phone, step, code, name, lastname, password,role} = req.body;
 
-        if (step === 1) {
+        if (step == 1) {
             const existingUser = await User.query().where("phone", phone).first();
             if (existingUser) {
                 return res.status(409).json({ success: false, err: "User already exists" });
             }
 
+               
             await User.query().insert({ phone });
-            const verificationCode = Math.floor((Math.random() + 1) * 10000);
-            const expirationTime = Date.now() + 5 * 60 * 1000; // 5 daqiqa
+            const code = Math.floor((Math.random() + 1) * 10000);
+            const d = new Date()
+            const time = d.setMinutes(d.getMinutes()+5)
 
             await User.query().where("phone", phone).update({
-                code: verificationCode,
-                exp_code_time: expirationTime,
+                code: code,
+                exp_code_time: time,
             });
-
+                  
             return res.status(200).json({ success: true, msg: "Verification code sent" });
         }
-
-        if (step === 2) {
+              
+        if (step == 2) {
+          
             const user = await User.query().where("phone", phone).first();
             if (!user) {
                 return res.status(404).json({ success: false, err: "User not found" });
             }
-            if (user.code !== code) {
+            if (user.code != code) {
                 return res.status(400).json({ success: false, err: "Wrong code" });
             }
+            
             if (user.exp_code_time < Date.now()) {
                 return res.status(400).json({ success: false, err: "Code expired" });
             }
 
             return res.status(200).json({ success: true, msg: "Code verified" });
         }
-
-        if (step === 3) {
+                 
+        if (step == 3) {
             const user = await User.query().where("phone", phone).first();
             if (!user) {
                 return res.status(404).json({ success: false, err: "User not found" });
             }
-
+              
             await User.query().where("phone", phone).update({
                 name,
                 lastname,
@@ -77,7 +81,7 @@ exports.postUser = async (req, res) => {
             return res.status(200).json({ success: true, msg: "User info updated" });
         }
 
-        if (step === 4) {
+        if (step == 4) {
             const salt = await bcrypt.genSalt(12);
             const hashedPassword = await bcrypt.hash(password, salt);
             
@@ -87,9 +91,9 @@ exports.postUser = async (req, res) => {
         }
 
         return res.status(400).json({ success: false, err: "Invalid step" });
-
-    } catch (error) {
-        return res.status(500).json({ success: false, error: "Server error" });
+// 
+    } catch (err) {
+        return res.status(500).json({ success: false, error: "Server error",err: err.message });
     }
 };
 
@@ -109,7 +113,7 @@ exports.updateUser = async (req, res) => {
             email: req.body.email,
             phone: req.body.phone,
             login: req.body.login,
-            updated_at: new Date(),
+            updated: new Date(),
         });
 
         return res.status(200).json({ success: true, msg: "User updated" });
@@ -140,8 +144,8 @@ exports.deleteUser = async (req, res) => {
 //  Login (autentifikatsiya)
 exports.auth = async (req, res) => {
     try {
-        const { login, password } = req.body;
-        const user = await User.query().where("login", login).first();
+        const { phone, password } = req.body;
+        const user = await User.query().where("phone", phone).first();
 
         if (!user) {
             return res.status(404).json({ success: false, err: "User not found" });
