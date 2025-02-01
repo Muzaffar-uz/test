@@ -9,6 +9,7 @@ const { wss } = require('./controller/soket');
 // Routerlarni import qilish
 const UserRouter = require('./router/user_router');
 const ChatRouter = require('./router/chat_router');
+const AnalayisRouter = require('./router/Client_card_analysisRouter')
 
 const app = express();
 const server = http.createServer(app); // HTTP server yaratish
@@ -21,7 +22,7 @@ app.use(cors());
 // Routerlarni ulash
 app.use('/user', UserRouter);
 app.use('/chat', ChatRouter);
-
+app.use('/analayis',AnalayisRouter)
 // WebSocketni HTTP server bilan ulash
 server.on('upgrade', (request, socket, head) => {
     const { pathname } = new URL(request.url, `http://${request.headers.host}`);
