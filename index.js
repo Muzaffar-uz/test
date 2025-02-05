@@ -22,7 +22,7 @@ app.use(cors());
 // Routerlarni ulash
 app.use('/user', UserRouter);
 app.use('/chat', ChatRouter);
-app.use('/analayis',AnalayisRouter)
+// app.use('/analayis',AnalayisRouter)
 // WebSocketni HTTP server bilan ulash
 server.on('upgrade', (request, socket, head) => {
     const { pathname } = new URL(request.url, `http://${request.headers.host}`);
